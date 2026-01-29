@@ -1,0 +1,8 @@
+node_modules
+.env
+.env.local
+.DS_Store
+/dist
+/apps/api/uploads
+/apps/api/prisma/dev.db
+/apps/web/dist

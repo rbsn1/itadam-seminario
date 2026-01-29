@@ -1,0 +1,225 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SECRETARIA
+  PEDAGOGIA
+  TESOURARIA
+  PROFESSOR
+}
+
+enum AttendanceStatus {
+  PRESENTE
+  AUSENTE
+}
+
+enum ChargeStatus {
+  ABERTO
+  PAGO
+  ATRASADO
+}
+
+enum PaymentMethod {
+  DINHEIRO
+  CARTAO
+  PIX
+  BOLETO
+  TRANSFERENCIA
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  auditLogs AuditLog[]
+  payments  Payment[]
+  teacherAssignments TeacherAssignment[]
+}
+
+model Student {
+  id        String      @id @default(uuid())
+  name      String
+  email     String?     @unique
+  document  String?     @unique
+  phone     String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  enrollments Enrollment[]
+  documents   Document[]
+  attendance  Attendance[]
+  charges     Charge[]
+}
+
+model Class {
+  id        String      @id @default(uuid())
+  name      String
+  year      Int
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  enrollments  Enrollment[]
+  modules      ClassModule[]
+  lessons      Lesson[]
+  billingProfile BillingProfile?
+  charges      Charge[]
+  teacherAssignments TeacherAssignment[]
+
+  @@unique([name, year])
+}
+
+model Enrollment {
+  id        String   @id @default(uuid())
+  student   Student  @relation(fields: [studentId], references: [id])
+  studentId String
+  class     Class    @relation(fields: [classId], references: [id])
+  classId   String
+  startDate DateTime @default(now())
+  endDate   DateTime?
+
+  @@unique([studentId, classId])
+  @@index([classId])
+}
+
+model Module {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  classModules ClassModule[]
+  lessons      Lesson[]
+  teacherAssignments TeacherAssignment[]
+
+  @@unique([name])
+}
+
+model TeacherAssignment {
+  id        String  @id @default(uuid())
+  teacher   User    @relation(fields: [teacherId], references: [id])
+  teacherId String
+  class     Class   @relation(fields: [classId], references: [id])
+  classId   String
+  module    Module? @relation(fields: [moduleId], references: [id])
+  moduleId  String?
+
+  @@unique([teacherId, classId, moduleId])
+  @@index([classId])
+}
+
+model ClassModule {
+  id        String  @id @default(uuid())
+  class     Class   @relation(fields: [classId], references: [id])
+  classId   String
+  module    Module  @relation(fields: [moduleId], references: [id])
+  moduleId  String
+
+  @@unique([classId, moduleId])
+  @@index([moduleId])
+}
+
+model Lesson {
+  id         String   @id @default(uuid())
+  class      Class    @relation(fields: [classId], references: [id])
+  classId    String
+  module     Module   @relation(fields: [moduleId], references: [id])
+  moduleId   String
+  date       DateTime
+  notes      String?
+
+  attendance Attendance[]
+
+  @@index([classId])
+  @@index([moduleId])
+}
+
+model Attendance {
+  id          String           @id @default(uuid())
+  lesson      Lesson           @relation(fields: [lessonId], references: [id])
+  lessonId    String
+  student     Student          @relation(fields: [studentId], references: [id])
+  studentId   String
+  status      AttendanceStatus
+  justification String?
+  createdAt   DateTime         @default(now())
+
+  @@unique([lessonId, studentId])
+  @@index([studentId])
+}
+
+model BillingProfile {
+  id          String   @id @default(uuid())
+  class       Class    @relation(fields: [classId], references: [id])
+  classId     String   @unique
+  monthlyValue Int
+  dueDay      Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Charge {
+  id          String       @id @default(uuid())
+  student     Student      @relation(fields: [studentId], references: [id])
+  studentId   String
+  class       Class        @relation(fields: [classId], references: [id])
+  classId     String
+  competence  String
+  amount      Int
+  dueDate     DateTime
+  status      ChargeStatus @default(ABERTO)
+  createdAt   DateTime     @default(now())
+
+  payments Payment[]
+
+  @@unique([studentId, classId, competence])
+  @@index([classId])
+  @@index([studentId])
+}
+
+model Payment {
+  id         String        @id @default(uuid())
+  charge     Charge        @relation(fields: [chargeId], references: [id])
+  chargeId   String
+  amount     Int
+  paidAt     DateTime
+  method     PaymentMethod
+  notes      String?
+  receiptUrl String?
+  createdBy  User          @relation(fields: [createdById], references: [id])
+  createdById String
+  createdAt  DateTime      @default(now())
+}
+
+model Document {
+  id        String   @id @default(uuid())
+  student   Student  @relation(fields: [studentId], references: [id])
+  studentId String
+  name      String
+  url       String
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  user       User?    @relation(fields: [userId], references: [id])
+  userId     String?
+  action     String
+  entity     String
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entity])
+}
