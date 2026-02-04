@@ -6,6 +6,7 @@
     "dev": "concurrently -k \"npm --workspace apps/api run dev\" \"npm --workspace apps/web run dev\"",
     "lint": "npm --workspace apps/api run lint && npm --workspace apps/web run lint",
     "test": "npm --workspace apps/api run test && npm --workspace apps/web run test",
+    "prisma:generate": "npm --workspace apps/api run prisma:generate",
     "prisma:migrate": "npm --workspace apps/api run prisma:migrate",
     "prisma:seed": "npm --workspace apps/api run prisma:seed"
   },
